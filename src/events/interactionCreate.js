@@ -422,3 +422,92 @@ export default {
     });
   }
 };
+const {
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
+    ActionRowBuilder,
+    EmbedBuilder
+} = require("discord.js");
+
+module.exports = {
+    name: "interactionCreate",
+    async execute(interaction, client) {
+
+        // =========================
+        // BUTTON
+        // =========================
+        if (interaction.isButton()) {
+
+            if (interaction.customId === "vouch_open") {
+
+                const modal = new ModalBuilder()
+                    .setCustomId("vouch_modal")
+                    .setTitle("⭐ Vouch schreiben");
+
+                const rating = new TextInputBuilder()
+                    .setCustomId("rating")
+                    .setLabel("Bewertung (1-5 Sterne oder ⭐⭐⭐)")
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder("z.B. 5 oder ⭐⭐⭐⭐⭐")
+                    .setRequired(true);
+
+                const text = new TextInputBuilder()
+                    .setCustomId("text")
+                    .setLabel("Dein Feedback")
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setRequired(true);
+
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(rating),
+                    new ActionRowBuilder().addComponents(text)
+                );
+
+                await interaction.showModal(modal);
+            }
+        }
+
+        // =========================
+        // MODAL
+        // =========================
+        if (interaction.isModalSubmit()) {
+
+            if (interaction.customId === "vouch_modal") {
+
+                let ratingInput = interaction.fields.getTextInputValue("rating");
+                const text = interaction.fields.getTextInputValue("text");
+
+                // ⭐ Sterne verarbeiten
+                let stars = "";
+
+                if (!isNaN(ratingInput)) {
+                    const num = Math.max(1, Math.min(5, parseInt(ratingInput)));
+                    stars = "⭐".repeat(num);
+                } else {
+                    const count = (ratingInput.match(/⭐/g) || []).length;
+                    stars = "⭐".repeat(Math.max(1, Math.min(5, count)));
+                }
+
+                // 📌 Channel ID EINTRAGEN!
+                const logChannel = interaction.guild.channels.cache.get("DEINE_CHANNEL_ID");
+
+                const embed = new EmbedBuilder()
+                    .setTitle("⭐ Neues Vouch")
+                    .addFields(
+                        { name: "👤 User", value: `${interaction.user}` },
+                        { name: "⭐ Bewertung", value: stars },
+                        { name: "💬 Feedback", value: text }
+                    )
+                    .setColor("Green")
+                    .setTimestamp();
+
+                await logChannel.send({ embeds: [embed] });
+
+                await interaction.reply({
+                    content: "✅ Danke für dein Vouch!",
+                    ephemeral: true
+                });
+            }
+        }
+    }
+};
